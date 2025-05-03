@@ -3,7 +3,19 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from math import hypot
-import osascript
+
+
+# convert a hex value to BGR tuple
+# def hex_to_bgr(hex_color):
+#     # Remove '#' if present
+#     hex_color = hex_color.lstrip('#')
+#     # Convert to RGB integers
+#     r = int(hex_color[0:2], 16)
+#     g = int(hex_color[2:4], 16)
+#     b = int(hex_color[4:6], 16)
+#     # Return in BGR order
+#     return (b, g, r)
+
 
 mpHands = mp.solutions.hands
 hands = mpHands.Hands(
@@ -14,9 +26,13 @@ hands = mpHands.Hands(
     max_num_hands=1)                # maximum number of hands default is 2
 
 Draw = mp.solutions.drawing_utils
+
+# drawing points and circle size
 myPoints = []
+
 circleRadius = 10
 
+# switches
 draw_mode = False
 touched = False
 
@@ -26,10 +42,11 @@ st.title("Webcam Live Feed")
 # Create a placeholder
 FRAME_WINDOW = st.image([])
 
-camera = cv2.VideoCapture(2)
+# video capture
+camera = cv2.VideoCapture(1)
 
 # Set a stop button
-run = st.checkbox('Run Webcam')
+run = st.checkbox('Show Webcam')
 
 while run:
     # Read frame from camera
@@ -45,6 +62,7 @@ while run:
     Process = hands.process(frame)  # process the image
     landmarkList = []
 
+    # Draw hand landmarks
     if Process.multi_hand_landmarks:
         for handlm in Process.multi_hand_landmarks:
             for _id, landmarks in enumerate(handlm.landmark):
@@ -54,6 +72,7 @@ while run:
             Draw.draw_landmarks(frame, handlm, mpHands.HAND_CONNECTIONS)
 
     if landmarkList:
+        # Get the coordinates of the landmarks
         x_0, y_0 = landmarkList[0][1], landmarkList[0][2]       # palm
         x_1, y_1 = landmarkList[4][1], landmarkList[4][2]       # tips of thumb
         x_2, y_2 = landmarkList[8][1], landmarkList[8][2]       # tips of index
@@ -61,6 +80,7 @@ while run:
         x_4, y_4 = landmarkList[16][1], landmarkList[16][2]     # tips of ring
         x_5, y_5 = landmarkList[20][1], landmarkList[20][2]     # tips of pinky
 
+        # Draw circles on the tips of each finger
         cv2.circle(frame, (x_0, y_0), 7, (0, 255, 0), cv2.FILLED)
         cv2.circle(frame, (x_1, y_1), 7, (0, 255, 0), cv2.FILLED)
         cv2.circle(frame, (x_2, y_2), 7, (0, 255, 0), cv2.FILLED)
@@ -70,7 +90,6 @@ while run:
 
         TI = hypot(x_2-x_1, y_2-y_1)        # thumb and index
         interTI = np.interp(TI, [15,220], [0,100])
-
         MP = hypot(x_3-x_0, y_3-y_0)        # middle and palm
         interMP = np.interp(MP, [15,300], [0,100])
         RP = hypot(x_4-x_0, y_4-y_0)        # ring and palm
@@ -81,24 +100,21 @@ while run:
         interTM = np.interp(TM, [15, 220], [0, 100])
 
 
-
-        # clear the canvas
-        # if int(interMP) < 55 and int(interRP) < 45 and int(interPP) < 45:
+        # clear the canvas by touching thumb to pointer
         if int(interTI) < 20:
             myPoints.clear()
 
-
-
         # Toggle drawing mode when thumb and middle finger tap
-        if int(interTM) < 15 and not touched:
+        if int(interTM) < 20 and not touched:
             draw_mode = not draw_mode
             touched = True
         elif int(interTM) > 30:
             touched = False
 
+
         # Draw if in drawing mode
         if draw_mode:
-            myPoints.append((x_2, y_2, (0, 0, 255), circleRadius))
+            myPoints.append((x_2, y_2, (0, 0, 0), circleRadius))
 
 
     for points in myPoints:
