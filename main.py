@@ -1,10 +1,20 @@
-import streamlit as st
 import cv2
 import mediapipe as mp
 import numpy as np
 from math import hypot
 
+from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import StreamingResponse
+from websockets.exceptions import ConnectionClosed
 
+import asyncio
+import uvicorn
+
+app = FastAPI()
+templates = Jinja2Templates(directory="template")
+
+camera = cv2.VideoCapture(1)
 mpHands = mp.solutions.hands
 hands = mpHands.Hands(
     static_image_mode=False,        # specify whether an image is static or it is a video stream
@@ -25,125 +35,38 @@ draw_mode = False
 touched = False
 
 
-st.title("Finger Paint")
-
-# Create a placeholder
-FRAME_WINDOW = st.image([])
-CANVAS_WINDOW = st.image([])
-
-# video capture
-camera = cv2.VideoCapture(1)
-
-# Set a stop button
-run = st.checkbox('Show canvas')
-
-while run:
-    # Read frame from camera
-    ret, frame = camera.read()
-    if not ret:
-        st.error("Failed to capture image from camera.")
-        break
-
-    # Convert BGR (OpenCV) to RGB (Streamlit expects RGB)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame = cv2.flip(frame, 1)
-
-    # create a blank canvas
-    canvas = np.zeros(shape=[720, 1280, 3], dtype=np.uint8)
-    canvas.fill(255)  # Fill the canvas with white color
-
-    Process = hands.process(frame)  # process the image
-    landmarkList = []
-
-    # Draw hand landmarks
-    if Process.multi_hand_landmarks:
-        for handlm in Process.multi_hand_landmarks:
-            for _id, landmarks in enumerate(handlm.landmark):
-                height, width, color_channels = frame.shape
-                x, y = int(landmarks.x * width), int(landmarks.y * height)
-                landmarkList.append([_id, x, y])
-            # Draw.draw_landmarks(frame, handlm, mpHands.HAND_CONNECTIONS)
-
-    if landmarkList:
-        # Get the coordinates of the landmarks
-        x_0, y_0 = landmarkList[0][1], landmarkList[0][2]       # palm
-        x_1, y_1 = landmarkList[4][1], landmarkList[4][2]       # tips of thumb
-        x_2, y_2 = landmarkList[8][1], landmarkList[8][2]       # tips of index
-        x_3, y_3 = landmarkList[12][1], landmarkList[12][2]     # tips of middle
-        x_4, y_4 = landmarkList[16][1], landmarkList[16][2]     # tips of ring
-        x_5, y_5 = landmarkList[20][1], landmarkList[20][2]     # tips of pinky
-
-        # Draw circles on the tips of each finger
-        # cv2.circle(frame, (x_0, y_0), 7, (0, 255, 0), cv2.FILLED)
-        cv2.circle(frame, (x_1, y_1), 7, (0, 255, 0), cv2.FILLED)       # thumb
-        cv2.circle(frame, (x_2, y_2), 7, (0, 0, 0), cv2.FILLED)       # index
-        cv2.circle(frame, (x_3, y_3), 7, (0, 255, 0), cv2.FILLED)       # middle
-        cv2.circle(canvas, (x_1, y_1), 7, (0, 255, 0), cv2.FILLED)      # thumb
-        cv2.circle(canvas, (x_2, y_2), 7, (0, 0, 0), cv2.FILLED)      # index
-        cv2.circle(canvas, (x_3, y_3), 7, (0, 255, 0), cv2.FILLED)      # middle
-        # cv2.circle(frame, (x_4, y_4), 7, (0, 255, 0), cv2.FILLED)
-        # cv2.circle(frame, (x_5, y_5), 7, (0, 255, 0), cv2.FILLED)
-
-        TI = hypot(x_2-x_1, y_2-y_1)        # thumb and index
-        interTI = np.interp(TI, [15,220], [0,100])
-        # MP = hypot(x_3-x_0, y_3-y_0)        # middle and palm
-        # interMP = np.interp(MP, [15,300], [0,100])
-        # RP = hypot(x_4-x_0, y_4-y_0)        # ring and palm
-        # interRP = np.interp(RP, [15,300], [0,100])
-        # PP = hypot(x_5-x_0, y_5-y_0)        # pinky and palm
-        # interPP = np.interp(PP, [15,300], [0,100])
-        TM = hypot(x_3-x_1, y_3-y_1)        # thumb and middle
-        interTM = np.interp(TM, [15, 220], [0, 100])
-
-
-        # clear the canvas by touching thumb to pointer
-        if int(interTI) < 20:
-            myPoints.clear()
-
-        # toggle drawing mode by touching thumb to middle finger
-        if int(interTM) < 20 and not touched:
-            old_draw = draw_mode
-            draw_mode = not draw_mode
-            if old_draw:
-                myPoints.append(None)
-            touched = True
-        elif int(interTM) > 30:
-            touched = False
-
-        # Draw if in drawing mode
-        if draw_mode:
-            myPoints.append((x_2, y_2, (0, 0, 0), circleRadius))
-
-
-    # smoother drawing instead of drawing dots
-    if len(myPoints) >= 2:
-        for i in range(1, len(myPoints)):
-            if myPoints[i - 1] is None or myPoints[i] is None:
-                continue
-            pt1 = myPoints[i - 1][:2]
-            pt2 = myPoints[i][:2]
-            cv2.line(canvas, pt1, pt2, (0, 0, 0), circleRadius)
-
-
-    # for points in myPoints:
-    #     cv2.circle(canvas, (points[0], points[1]), points[3], points[2], cv2.FILLED)
-    #     cv2.circle(frame, (points[0], points[1]), points[3], points[2], cv2.FILLED)
+@app.get("/")
+def index(request: Request):
+    return templates.TemplateResponse('index.html', {"request": request})
 
 
 
-    # Display frame
-    CANVAS_WINDOW.image(canvas)
-    FRAME_WINDOW.image(frame)
-    
+@app.websocket('/websocket')
+async def get_stream(websocket: WebSocket):
+    await websocket.accept()
+    try: 
+        while True:
+            success, frame = camera.read()
+            if not success:
+                break
+            else:
+                
+                #
 
-# Release the webcam when done
-camera.release()
 
 
 
-st.markdown('''### **How to**''')
-st.text('''
-        Your index finger is the pen (black)
-        Tap your thumb and middle finger to toggle drawing mode on or off
-        Tap your thumb and index finger to clear the canvas
-        ''')
+
+
+
+                _, buffer = cv2.imencode('.jpg', frame)
+                await websocket.send_bytes(buffer.tobytes())
+            await asyncio.sleep(0.01)
+    except (WebSocketDisconnect, ConnectionClosed):
+        print("Client disconnected")
+
+
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, host = '127.0.0.1', port = 8000)

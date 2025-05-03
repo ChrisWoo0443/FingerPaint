@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head> 
+        <title>Finger Paint</title>
+    </head>
+    <body>
+        <img id="frame" src="">
+        <script>
+            let ws = new WebSocket("ws://localhost:8000/websocket");
+            let image = document.getElementById("frame");
+            image.onload = function(){
+                URL.revokeObjectURL(this.src);
+            }
+            ws.onmessage = function(event){
+                image.src = URL.createObjectURL(event.data);
+            }
+        </script> 
+    </body>
