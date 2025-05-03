@@ -6,12 +6,14 @@ from math import hypot
 from fastapi.templating import Jinja2Templates
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from websockets.exceptions import ConnectionClosed
 
 import asyncio
 import uvicorn
 
 app = FastAPI()
+app.mount("/style", StaticFiles(directory="style"), name="style")
 templates = Jinja2Templates(directory="template")
 
 camera = cv2.VideoCapture(1)
