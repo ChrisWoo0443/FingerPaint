@@ -15,39 +15,49 @@
             }
             #canvas {
                 border: 1px solid #000;
-                background-color: #fff; /* slightly lighter dark gray for the canvas */
+                background-color: #fff; /* canvas background */
                 width: 1280px;
                 height: 720px;
                 margin-bottom: 20px;
+                border-radius: 20px;  /* rounded canvas */
             }
-            #frame {
-                max-width: 100%;
+            .display-area {
+                display: flex;
+                gap: 20px;
+                margin-top: 20px;
+            }
+            #frame, .notification {
+                width: 540px;
                 height: auto;
+                border-radius: 20px;  /* rounded webcam frame */
             }
         </style>
     </head>
     <body>
+        <h1>Finger Paint</h1>
         <canvas id="canvas"></canvas>
-        <img id="frame" src="">
-        <script>
-            let ws = new WebSocket("ws://localhost:8000/websocket");
-            let image = document.getElementById("frame");
-            image.onload = function(){
-                URL.revokeObjectURL(this.src);
-            }
-            ws.onmessage = function(event){
-                image.src = URL.createObjectURL(event.data);
-            }
-        </script>
-        <!-- From Uiverse.io by SouravBandyopadhyay --> 
-        <div class="notification">
-            <div class="notiglow"></div>
-            <div class="notiborderglow"></div>
-            <div class="notititle">How to draw</div>
-            <div class="notibody">1. Your index finger is the pen tip
-                <br>2. Tap your thumb and middle finger to toggle drawing on and off
-                <br>3. Tap your thumb and index finger to clear the canvas
+        <div class="display-area">
+            <img id="frame" src="">
+            <div class="notification">
+                <div class="notiglow"></div>
+                <div class="notiborderglow"></div>
+                <div class="notititle">How to draw</div>
+                <div class="notibody">
+                    1. Your index finger is the pen tip<br>
+                    2. Tap your thumb and middle finger to toggle drawing on/off<br>
+                    3. Tap your thumb and index finger to clear the canvas
+                </div>
             </div>
-        </div>
+            <script>
+                let ws = new WebSocket("ws://localhost:8000/websocket");
+                let image = document.getElementById("frame");
+                image.onload = function(){
+                    URL.revokeObjectURL(this.src);
+                }
+                ws.onmessage = function(event){
+                    image.src = URL.createObjectURL(event.data);
+                }
+            </script>
+        </div>    
     </body>
 </html>
