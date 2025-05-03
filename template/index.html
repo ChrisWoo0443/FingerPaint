@@ -11,31 +11,42 @@
                 flex-direction: column;
                 min-height: 100vh;
                 margin: 0;
-                background-color: #333333; /* dark gray background for the page */
+                background-color: #333333;
+            }
+            /* Mirror canvas styling */
+            #mirrorCanvas {
+                margin-top: 20px;
+                border: 1px solid #000;
+                background-color: #fff;
+                width: 1500px; /* larger than the webcam */
+                height: 800px;
+                margin-bottom: 20px;
+                border-radius: 20px;
             }
             #canvas {
+                margin-top: 20px;
                 border: 1px solid #000;
-                background-color: #fff; /* canvas background */
+                background-color: #fff;
                 width: 1280px;
                 height: 720px;
                 margin-bottom: 20px;
-                border-radius: 20px;  /* rounded canvas */
+                border-radius: 20px;
             }
             .display-area {
                 display: flex;
                 gap: 20px;
-                margin-top: 20px;
+                margin-top: 1rem;
             }
             #frame, .notification {
                 width: 540px;
                 height: auto;
-                border-radius: 20px;  /* rounded webcam frame */
+                border-radius: 1rem;
             }
         </style>
     </head>
     <body>
-        <h1>Finger Paint</h1>
-        <canvas id="canvas"></canvas>
+        <!-- New mirror canvas above the webcam display -->
+        <canvas id="mirrorCanvas"></canvas>
         <div class="display-area">
             <img id="frame" src="">
             <div class="notification">
@@ -43,21 +54,44 @@
                 <div class="notiborderglow"></div>
                 <div class="notititle">How to draw</div>
                 <div class="notibody">
-                    1. Your index finger is the pen tip<br>
-                    2. Tap your thumb and middle finger to toggle drawing on/off<br>
-                    3. Tap your thumb and index finger to clear the canvas
+                    1. Your index finger is the pen tip.<br>
+                    2. Tap your thumb and middle finger to toggle drawing on/off.<br>
+                    3. Tap your thumb and index finger to clear the canvas.<br>
+                    4. Your whole hand has to be present.
                 </div>
             </div>
-            <script>
-                let ws = new WebSocket("ws://localhost:8000/websocket");
-                let image = document.getElementById("frame");
-                image.onload = function(){
-                    URL.revokeObjectURL(this.src);
+        </div>
+        <script>
+            // WebSocket for mirror canvas (drawing)
+            let wsCanvas = new WebSocket("ws://localhost:8000/canvas");
+            let mirrorCanvas = document.getElementById("mirrorCanvas");
+            let mirrorCtx = mirrorCanvas.getContext('2d');
+
+            wsCanvas.binaryType = "arraybuffer";
+
+            wsCanvas.onmessage = function(event){
+                let blob = new Blob([event.data], { type: "image/jpeg" });
+                let img = new Image();
+                img.onload = function(){
+                    // Resize canvas to match image
+                    mirrorCanvas.width = img.width;
+                    mirrorCanvas.height = img.height;
+                    mirrorCtx.clearRect(0, 0, mirrorCanvas.width, mirrorCanvas.height);
+                    mirrorCtx.drawImage(img, 0, 0);
                 }
-                ws.onmessage = function(event){
-                    image.src = URL.createObjectURL(event.data);
-                }
-            </script>
-        </div>    
+                img.src = URL.createObjectURL(blob);
+            }
+
+            // WebSocket for webcam video
+            let wsWebcam = new WebSocket("ws://localhost:8000/webcam");
+            let image = document.getElementById("frame");
+            image.onload = function(){
+                URL.revokeObjectURL(this.src);
+            }
+            wsWebcam.onmessage = function(event){
+                let blob = new Blob([event.data], { type: "image/jpeg" });
+                image.src = URL.createObjectURL(blob);
+            }
+        </script>
     </body>
 </html>
