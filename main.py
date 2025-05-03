@@ -143,7 +143,7 @@ camera.release()
 
 st.markdown('''### **How to**''')
 st.text('''
-        Your index finger is the pen
+        Your index finger is the pen (black)
         Tap your thumb and middle finger to toggle drawing mode on or off
         Tap your thumb and index finger to clear the canvas
         ''')
