@@ -32,7 +32,7 @@ FRAME_WINDOW = st.image([])
 CANVAS_WINDOW = st.image([])
 
 # video capture
-camera = cv2.VideoCapture(1)
+camera = cv2.VideoCapture(0)
 
 # Set a stop button
 run = st.checkbox('Show canvas')
