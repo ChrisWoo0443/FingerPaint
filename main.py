@@ -11,6 +11,11 @@ from websockets.exceptions import ConnectionClosed
 import asyncio
 import uvicorn
 
+'''
+https://www.youtube.com/watch?v=1H9qUzmSm_M
+websocket tutorial
+'''
+
 app = FastAPI()
 app.mount("/style", StaticFiles(directory="style"), name="style")
 templates = Jinja2Templates(directory="template")
@@ -218,3 +223,4 @@ async def get_stream(websocket: WebSocket):
 
 if __name__ == '__main__':
     uvicorn.run(app, host = '127.0.0.1', port = 8000)
+
