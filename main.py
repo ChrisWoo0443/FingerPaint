@@ -129,14 +129,11 @@ async def get_stream(websocket: WebSocket):
                 #     cv2.circle(frame, (points[0], points[1]), points[3], points[2], cv2.FILLED)
 
 
-
                 _, buffer = cv2.imencode('.jpg', frame)
                 await websocket.send_bytes(buffer.tobytes())
             await asyncio.sleep(0.01)
     except (WebSocketDisconnect, ConnectionClosed):
         print("Client disconnected")
-
-
 
 
 if __name__ == '__main__':
