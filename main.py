@@ -14,6 +14,12 @@ hands = mpHands.Hands(
     max_num_hands=1)                # maximum number of hands default is 2
 
 Draw = mp.solutions.drawing_utils
+myPoints = []
+circleRadius = 10
+
+draw_mode = False
+touched = False
+
 
 st.title("Webcam Live Feed")
 
@@ -71,11 +77,32 @@ while run:
         interRP = np.interp(RP, [15,300], [0,100])
         PP = hypot(x_5-x_0, y_5-y_0)        # pinky and palm
         interPP = np.interp(PP, [15,300], [0,100])
+        TM = hypot(x_3-x_1, y_3-y_1)        # thumb and middle
+        interTM = np.interp(TM, [15, 220], [0, 100])
 
-        if int(interMP) < 55 and int(interRP) < 45 and int(interPP) < 45:
-                    cv2.line(frame, (x_1, y_1), (x_2, y_2), (0, 255, 0), 3)
-                    volume = "set volume output volume " + str(int(interTI))
-                    osascript.osascript(volume)
+
+
+        # clear the canvas
+        # if int(interMP) < 55 and int(interRP) < 45 and int(interPP) < 45:
+        if int(interTI) < 20:
+            myPoints.clear()
+
+
+
+        # Toggle drawing mode when thumb and middle finger tap
+        if int(interTM) < 15 and not touched:
+            draw_mode = not draw_mode
+            touched = True
+        elif int(interTM) > 30:
+            touched = False
+
+        # Draw if in drawing mode
+        if draw_mode:
+            myPoints.append((x_2, y_2, (0, 0, 255), circleRadius))
+
+
+    for points in myPoints:
+        cv2.circle(frame, (points[0], points[1]), points[3], points[2], cv2.FILLED)
 
 
     # Display frame
