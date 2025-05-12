@@ -24,7 +24,7 @@ templates = Jinja2Templates(directory="template")
 '''
 change camera_val to your the value used by your webcam
 '''
-camera_val = 0
+camera_val = 1
 camera = cv2.VideoCapture(camera_val)
 
 
