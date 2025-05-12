@@ -20,7 +20,14 @@ app = FastAPI()
 app.mount("/style", StaticFiles(directory="style"), name="style")
 templates = Jinja2Templates(directory="template")
 
-camera = cv2.VideoCapture(1)
+
+'''
+change camera_val to your the value used by your webcam
+'''
+camera_val = 0
+camera = cv2.VideoCapture(camera_val)
+
+
 mpHands = mp.solutions.hands
 hands = mpHands.Hands(
     static_image_mode=False,        # specify whether an image is static or it is a video stream
