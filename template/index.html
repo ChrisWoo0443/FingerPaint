@@ -63,36 +63,62 @@
             </div>
         </div>
         <script>
-            // WebSocket for mirror canvas (drawing)
-            let wsCanvas = new WebSocket("ws://localhost:8000/canvas");
-            let mirrorCanvas = document.getElementById("mirrorCanvas");
-            let mirrorCtx = mirrorCanvas.getContext('2d');
+            // Shared function to create and send webcam frames
+            function createWebcamStreamSocket(url, onFrame, fps = 30) {
+                const socket = new WebSocket(url);
+                socket.binaryType = "arraybuffer";
 
-            wsCanvas.binaryType = "arraybuffer";
+                const video = document.createElement("video");
+                video.autoplay = true;
+                video.width = 640;
+                video.height = 480;
 
-            wsCanvas.onmessage = function(event){
-                let blob = new Blob([event.data], { type: "image/jpeg" });
-                let img = new Image();
-                img.onload = function(){
-                    // Resize canvas to match image
+                navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+                    video.srcObject = stream;
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.width;
+                    canvas.height = video.height;
+                    const ctx = canvas.getContext("2d");
+
+                    const interval = 1000 / fps; // ~33.33ms
+                    let lastTime = 0;
+
+                    function sendFrame(timestamp) {
+                        if (timestamp - lastTime >= interval) {
+                            ctx.drawImage(video, 0, 0);
+                            const dataURL = canvas.toDataURL("image/jpeg");
+                            socket.send(dataURL);
+                            lastTime = timestamp;
+                        }
+                        requestAnimationFrame(sendFrame);
+                    }
+
+                    requestAnimationFrame(sendFrame);
+                });
+
+                socket.onmessage = (event) => onFrame(event.data);
+            }
+
+            // Mirror Canvas
+            const mirrorCanvas = document.getElementById("mirrorCanvas");
+            const mirrorCtx = mirrorCanvas.getContext('2d');
+
+            createWebcamStreamSocket("ws://localhost:8000/canvas", (data) => {
+                const img = new Image();
+                img.onload = function () {
                     mirrorCanvas.width = img.width;
                     mirrorCanvas.height = img.height;
                     mirrorCtx.clearRect(0, 0, mirrorCanvas.width, mirrorCanvas.height);
                     mirrorCtx.drawImage(img, 0, 0);
-                }
-                img.src = URL.createObjectURL(blob);
-            }
+                };
+                img.src = data;
+            });
 
-            // WebSocket for webcam video
-            let wsWebcam = new WebSocket("ws://localhost:8000/webcam");
-            let image = document.getElementById("frame");
-            image.onload = function(){
-                URL.revokeObjectURL(this.src);
-            }
-            wsWebcam.onmessage = function(event){
-                let blob = new Blob([event.data], { type: "image/jpeg" });
-                image.src = URL.createObjectURL(blob);
-            }
+            // Webcam feed frame (optional: processed webcam version)
+            const image = document.getElementById("frame");
+            createWebcamStreamSocket("ws://localhost:8000/process", (data) => {
+                image.src = data;
+            });
         </script>
     </body>
 </html>
