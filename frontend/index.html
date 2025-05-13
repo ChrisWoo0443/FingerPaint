@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <title>Finger Paint</title>
-        <link rel="stylesheet" href="../style/styles.css">
+        <link rel="stylesheet" href="style/styles.css">
         <style>
             body {
                 display: flex;
@@ -103,7 +103,7 @@
             const mirrorCanvas = document.getElementById("mirrorCanvas");
             const mirrorCtx = mirrorCanvas.getContext('2d');
 
-            createWebcamStreamSocket("ws://localhost:8000/canvas", (data) => {
+            createWebcamStreamSocket("ws://fingerpaint.onrender.com/canvas", (data) => {
                 const img = new Image();
                 img.onload = function () {
                     mirrorCanvas.width = img.width;
@@ -116,7 +116,7 @@
 
             // Webcam feed frame (optional: processed webcam version)
             const image = document.getElementById("frame");
-            createWebcamStreamSocket("ws://localhost:8000/process", (data) => {
+            createWebcamStreamSocket("ws://fingerpaint.onrender.com/process", (data) => {
                 image.src = data;
             });
         </script>
